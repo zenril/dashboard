@@ -1,0 +1,95 @@
+#!/usr/bin/env ruby
+
+# generic vhost script
+# updated 28/09/2016
+
+require 'yaml'
+require 'optparse'
+
+# parse the input
+# ---------------
+
+class Parser
+  def self.parse(options)
+    args = {}
+
+    opt_parser = OptionParser.new do |opts|
+      opts.banner = "Usage: vhost [options]"
+
+      opts.on("-a", "--add", "add vhost data") do |n|
+        args[:add] = true
+      end
+
+      opts.on("-d", "--delete", "remove vhost data") do |n|
+        args[:delete] = true
+      end
+
+      opts.on("-pPATH", "--path=PATH", "vhost file to write to defaults to `/etc/apache2/sites-available/{PROJECT_ID}_dev.conf`") do |n|
+        args[:path] = n
+      end
+
+      opts.on("-h", "--help", "Prints this help") do
+        puts opts
+        exit
+      end
+    end
+
+    opt_parser.parse!(options)
+    return args
+  end
+end
+options = Parser.parse ARGV
+
+# do the bizzo
+# ------------
+
+dir = File.expand_path(File.dirname(__FILE__) + '/..')
+conf = YAML.load File.open(dir + '/config/config.yml', 'rb').read
+path = options[:path] || '/etc/apache2/sites-available/' + conf['common']['id']  + '_dev.conf'
+
+# make sure the file exists
+puts `sudo touch "#{path}"`
+
+# get the contents
+vhost = File.read path
+
+# the content we want to append
+content = %[
+###_START_#{conf['common']['id']}_DEV_###
+<VirtualHost *:80>
+
+  ServerName  #{conf['common']['id']}.loc
+  ServerAlias www.#{conf['common']['id']}.loc
+  ServerAlias #{conf['common']['id']}.*.xip.io
+  ServerAlias www.#{conf['common']['id']}.*.xip.io
+  ServerAlias #{conf['common']['id']}*.localtunnel.me
+
+  DocumentRoot #{dir}/public
+
+  <Directory #{dir}/public>
+    Options Indexes MultiViews FollowSymLinks
+    AllowOverride All
+    Require all granted
+  </Directory>
+
+</VirtualHost>
+###_END_#{conf['common']['id']}_DEV_###
+]
+
+# remove any vhost / hosts data if its an add or delete
+if options[:add] || options[:delete]
+  vhost = vhost.gsub content, ''
+  puts `echo "#{vhost}" | sudo tee "#{path}"`
+  # puts `"#{dir}/bin/hosts" -d`
+end
+
+# add it back in if it's an add
+if options[:add]
+
+  # create the vhost data
+  new_content = vhost + content
+  puts `echo "#{new_content}" | sudo tee "#{path}"`
+
+  # add the hosts data
+  # puts `"#{dir}/bin/hosts" -a`
+end
