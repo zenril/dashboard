@@ -1,4 +1,4 @@
-import notificationStore from '../store/DashboardStore.js'
+import notificationStore from '../store/Notifications.js'
 
 
 export default {
