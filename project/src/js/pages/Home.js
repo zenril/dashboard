@@ -18,42 +18,65 @@ export default class Home extends React.Component
     constructor(props){
         super(props);
         window.thing2 = false;
-        let ors = [];
-        let ors2 = [];
-
-        ors[0] = new OR_Gate();
-        ors[0].pullState(function(){
-            return window.thing2;
-        });
-        ors[0].color = "green";
 
 
-        for (let j = 0; j < 50; j++) {
-            var or = null;
-            or = new OR_Gate();
-            ors[ors.length - 1].add(or);
-            ors.push(or);
-        }
+        var io = new OR_Gate();
+        io.color = "green";
 
-        ors[ors.length - 1].add(ors[2]);
+        io.pullState(function(){ return window.input; });
+        var branch = io.OR().OR().OR({id: 'pos0'}).OR({id: 'pos1'}).from('pos0').OR().OR().OR().OR().OR().OR().OR().OR().OR().OR().join('pos1').OR().OR().OR().OR();
+        var g = Gate.byID('pos1').AND();
+        g.color = "blue";
+        branch.add(g);
+        g.OR();
 
-        var out = new Output(function(v, vs){
-        });
+        // branch.OR().OR().OR().Output((v,e) => {
+        //     //console.log('branch1', v, e);
+        // });
+
+        // branch.OR().OR().OR().Output((v,e) => {
+        //     //console.log('branch2', v, e);
+        // });
+
+
+        //  let ors = [];
+        // let ors2 = [];
+
+        // ors[0] = new OR_Gate();
+        // ors[0].pullState(function(){
+        //     return window.thing2;
+        // });
+        // ors[0].color = "green";
+
+
+        // for (let j = 0; j < 50; j++) {
+        //     var or = null;
+        //     or = new OR_Gate();
+        //     ors[ors.length - 1].add(or);
+        //     ors.push(or);
+        // }
+
+        // ors[ors.length - 1].add(ors[2]);
+
+        // var out = new Output(function(v, vs){
+        // });
 
         
-        ors2[0] = new OR_Gate();
-        ors[10].add(ors2[0]);
+        // ors2[0] = new OR_Gate();
+        // ors[10].add(ors2[0]);
 
-        for (let k = 0; k < 30; k++) {
-            var or = new OR_Gate();
-            ors2[ors2.length - 1].add(or);
-            ors2.push(or);
-        }
+        // for (let k = 0; k < 30; k++) {
+        //     var or = new OR_Gate();
+        //     ors2[ors2.length - 1].add(or);
+        //     ors2.push(or);
+        // }
 
-        ors2[ors2.length - 1].add(ors[15]);
+        // ors2[ors2.length - 1].add(ors[15]);
 
-        out.color = "blue";
-        ors[ors.length - 1].add(out);
+        // out.color = "blue";
+        // ors[ors.length - 1].add(out);
+
+
 
     }
 
@@ -63,6 +86,15 @@ export default class Home extends React.Component
         var svg = d3.select("svg"),
             width = +svg.attr("width"),
             height = +svg.attr("height");
+            svg.append("svg:defs").append("svg:marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr('refX', -20)//so that it comes towards the center.
+            .attr("markerWidth", 5)
+            .attr("markerHeight", 5)
+            .attr("orient", "auto")
+          .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5");
 
         var simulation = d3.forceSimulation()
             .force("charge", d3.forceManyBody().strength(-100))
@@ -107,7 +139,9 @@ export default class Home extends React.Component
         link = link
             .data(graph.links)
             .enter().append("line")
-            .attr("class", "link");
+            .attr("class", "link").style( "stroke", "#000" )
+            .attr('marker-start', "url(#arrow)")//attach the arrow from defs
+            .style( "stroke-width", 2 );
 
         node = node
             .data(graph.nodes)

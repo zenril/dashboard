@@ -11,8 +11,11 @@ class UUID {
 
 export class Gate
 {
-    constructor(props) {
+    constructor(opts) {
+
         this.uuid = UUID.v4();
+        this.id = (opts && opts.id) ? opts.id : this.uuid;
+        this.callback_afterCalc = (opts && opts.after) ? opts.after : null;
 
         this.connections = {
             parents : [],
@@ -22,16 +25,26 @@ export class Gate
         this.state = false;
         this.pullstate = null;
         this.values = [];
-        this.calcedValue = props;
-        this.events = {
-
-        };
+        this.events = {};
         Gate.gates().push(this);
+        Gate.addToSearch(this);
     }
 
     static gates() {
         if(!Gate.all) Gate.all = [];
         return Gate.all;
+    }
+
+    static addToSearch(gate_instance) {
+        if(!Gate.searchMap) Gate.searchMap = {};
+        if(Gate.byID(gate_instance.id)) return;
+        return Gate.searchMap[gate_instance.id] = gate_instance;
+    }
+
+    static byID(id){
+        if(!Gate.searchMap) Gate.searchMap = {};
+        if(!Gate.searchMap[id]) return null;
+        return Gate.searchMap[id];
     }
 
     static tick(after) {
@@ -47,7 +60,7 @@ export class Gate
             if(after) after();
 
             Gate.tick(after);
-        }, 50);
+        }, 1000);
 
 
     }
@@ -73,6 +86,26 @@ export class Gate
 
     add(gate) {
         gate.connections.parents.push(this);
+        return gate;
+    }
+
+    join(id) {
+        var g = Gate.byID(id);
+        this.add(g);
+        return g;
+    }
+
+    from(id) {
+        var g = Gate.byID(id);
+        return g;
+    }
+
+    static addGateType(gate_class){
+        Gate.prototype[gate_class.type] = function(p){
+            var g = new gate_class(p);
+            this.add(g);
+            return g;
+        }
     }
 
     run() {
@@ -94,8 +127,8 @@ export class Gate
             _this.state =  calced;
         }
 
-        if(this.calcedValue){
-            this.calcedValue(_this.state, _this.values);
+        if(this.callback_afterCalc){
+            this.callback_afterCalc(_this.state, _this.values);
         }
 
         if(!old && _this.state) this.trigger('state:true');
@@ -121,8 +154,12 @@ export class Gate
 
 export class OR_Gate extends Gate
 {
-    constructor(props) {
-        super(props);
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'OR';
     }
 
     calc(values) {
@@ -134,11 +171,16 @@ export class OR_Gate extends Gate
         return resp;
     }
 }
+Gate.addGateType(OR_Gate);
 
 export class AND_Gate extends Gate
 {
-    constructor(props) {
-        super(props);
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'AND';
     }
 
     calc(values) {
@@ -151,10 +193,16 @@ export class AND_Gate extends Gate
 
 }
 
+Gate.addGateType(AND_Gate);
+
 export class NOT_Gate extends Gate
 {
-    constructor(props) {
-        super(props);
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'NOT';
     }
 
     calc(values) {
@@ -165,11 +213,16 @@ export class NOT_Gate extends Gate
         return resp;
     }
 }
+Gate.addGateType(NOT_Gate);
 
 export class Output extends Gate
 {
-    constructor(props) {
-        super(props);
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'Output';
     }
 
     calc(values) {
@@ -177,15 +230,6 @@ export class Output extends Gate
     }
 }
 
-// window.o1  = new OR_Gate();
-// window.o2  = new OR_Gate();
-// window.annd = new AND_Gate();
-// window.o1.add(window.annd);
-// window.o2.add(window.annd);
-// window.annd.on('state:true', function(){ console.log("yesy"); });
-
-// window.annd.add(new Output(function(){
-
-// }));
+Gate.addGateType(Output);
 
 window.GATE = Gate;
