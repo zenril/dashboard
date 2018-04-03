@@ -95,6 +95,12 @@ export class Gate
         return g;
     }
 
+    joinFrom(id) {
+        var g = Gate.byID(id);
+        g.add(this);
+        return g;
+    }
+
     from(id) {
         var g = Gate.byID(id);
         return g;
@@ -187,13 +193,110 @@ export class AND_Gate extends Gate
         var ret = true;
         values.forEach((v)=>{
             if(!v) ret = false;
-        })
+        });
         return ret;
     }
 
 }
 
 Gate.addGateType(AND_Gate);
+
+export class NAND_Gate extends Gate
+{
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'NAND';
+    }
+
+    calc(values) {
+        var allon = true;
+        values.forEach((v)=>{
+            if(!v) allon = false;
+        });
+        return !allon;
+    }
+
+}
+
+Gate.addGateType(NAND_Gate);
+
+export class XOR_Gate extends Gate
+{
+    constructor(opts) {
+        super(opts);
+    }
+
+    static get type() {
+        return 'XOR';
+    }
+
+    calc(values) {
+        var num = 0;
+        values.forEach((v)=>{
+            if(v) num++;
+        });
+        return num == 1;
+    }
+
+}
+
+
+Gate.addGateType(XOR_Gate);
+
+export class MEM extends Gate
+{
+    constructor(opts) {
+        super(opts);
+        this.persistState = false;
+    }
+
+    static get type() {
+        return 'MEM';
+    }
+
+    calc(values) {
+        var num = 0;
+        values.forEach((v)=>{
+            if(v) num++;
+        });
+
+        this.persistState = num>0? !this.persistState : this.persistState;
+        return this.persistState;
+    }
+
+}
+Gate.addGateType(MEM);
+export class Pulse extends Gate
+{
+    constructor(opts) {
+        super(opts);
+        this.hasBeenOff = true;
+    }
+
+    static get type() {
+        return 'Pulse';
+    }
+
+    calc(values) {
+        var num = 0;
+        values.forEach((v)=>{
+            if(v) num++;
+        });
+
+        if(this.hasBeenOff && num > 0){
+            this.hasBeenOff = false;
+            return true;
+        }
+        this.hasBeenOff = !num;
+        return false;
+    }
+}
+
+
+Gate.addGateType(Pulse);
 
 export class NOT_Gate extends Gate
 {
@@ -209,7 +312,7 @@ export class NOT_Gate extends Gate
         var resp = true;
         values.forEach((v)=>{
             if(v) resp = false;
-        })
+        });
         return resp;
     }
 }
